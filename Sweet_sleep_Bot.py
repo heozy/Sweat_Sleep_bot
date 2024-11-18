@@ -4,6 +4,10 @@ import time
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 
+# Инициализация планировщика
+scheduler = BackgroundScheduler()
+scheduler.start()
+
 # Словарь для хранения данных пользователей
 users = {}
 
@@ -12,6 +16,12 @@ class User: #класс, содержащий данные о удобном д�
         self.chat_id = chat_id
         self.message_time_morning = None
         self.message_time_evening = None
+        self.survey_data = []
+        self.tips_received = []
+        self.tips_sent = 0
+        self.survey_in_progress = False
+        self.current_survey_step = 0
+        self.current_survey_data = {}
 
 
 bot = telebot.TeleBot('7540882179:AAHlHSHct3g2ic2Y8_YI4aozsuEz9K5tjgs')
@@ -142,7 +152,109 @@ def schedule_user_messages(user):
     scheduler.add_job(send_evening_message, 'cron', hour=evening_hour, minute=evening_minute, args=[user.chat_id], id=str(user.chat_id)+'_evening')
 
 def send_morning_message(chat_id):
-    pass
+    user = users.get(chat_id)
+    if user:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        item_yes = types.KeyboardButton('Да')
+        item_no = types.KeyboardButton('Нет')
+        markup.add(item_yes, item_no)
+        bot.send_message(chat_id, 'Привет! Лови утреннюю анкету 😊\nВы готовы пройти анкету?', reply_markup=markup)
+
+def survey_handler(message):
+    chat_id = message.chat.id
+    user = users[chat_id]
+    if message.text == 'Да':
+        user.current_survey_step = 1
+        user.current_survey_data = {}
+        ask_survey_question(message)
+    else:
+        bot.send_message(chat_id, 'Хорошо, может в следующий раз!')
+        user.survey_in_progress = False
+
+def ask_survey_question(message):
+    chat_id = message.chat.id
+    user = users[chat_id]
+    if user.current_survey_step == 1:
+        bot.send_message(chat_id, 'Время подъема (часы):')
+        bot.register_next_step_handler(message, survey_response)
+    elif user.current_survey_step == 2:
+        bot.send_message(chat_id, 'Время подъема (минуты):')
+        bot.register_next_step_handler(message, survey_response)
+    elif user.current_survey_step == 3:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        item1 = types.KeyboardButton('👍')
+        item2 = types.KeyboardButton('👌')
+        item3 = types.KeyboardButton('👎')
+        markup.add(item1, item2, item3)
+        bot.send_message(chat_id, 'Оцени легкость подъема', reply_markup=markup)
+        bot.register_next_step_handler(message, survey_response)
+    elif user.current_survey_step == 4:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        item1 = types.KeyboardButton('Быстро')
+        item2 = types.KeyboardButton('Средне')
+        item3 = types.KeyboardButton('Долго')
+        markup.add(item1, item2, item3)
+        bot.send_message(chat_id, 'Быстро получилось заснуть?', reply_markup=markup)
+        bot.register_next_step_handler(message, survey_response)
+    elif user.current_survey_step == 5:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        item1 = types.KeyboardButton('😀')
+        item2 = types.KeyboardButton('😊')
+        item3 = types.KeyboardButton('😐')
+        item4 = types.KeyboardButton('😒')
+        item5 = types.KeyboardButton('😖')
+        markup.add(item1, item2, item3, item4, item5)
+        bot.send_message(chat_id, 'Как твой настрой на день?', reply_markup=markup)
+        bot.register_next_step_handler(message, survey_response)
+    elif user.current_survey_step == 6:
+        bot.send_message(chat_id, 'Супер! Крутого тебе дня 🤩')
+        # Сохраняем данные анкеты
+        user.survey_data.append(user.current_survey_data)
+        user.survey_in_progress = False
+        bot.send_message(chat_id, 'Если хотите посмотреть меню, напишите /menu')
+
+def survey_response(message):
+    chat_id = message.chat.id
+    user = users[chat_id]
+    step = user.current_survey_step
+    response = message.text
+    if step == 1:
+        if response.isdigit() and 0 <= int(response) and int(response) <= 23:
+            user.current_survey_data['wake_hour'] = int(response)
+            user.current_survey_step += 1
+            ask_survey_question(message)
+        else:
+            bot.send_message(chat_id, 'Пожалуйста, введите час в формате от 0 до 23.')
+            bot.register_next_step_handler(message, survey_response)
+    elif step == 2:
+        if response.isdigit() and 0 <= int(response) and int(response) <= 59:
+            user.current_survey_data['wake_minute'] = int(response)
+            user.current_survey_step += 1
+            ask_survey_question(message)
+        else:
+            bot.send_message(chat_id, 'Пожалуйста, введите минуты в формате от 0 до 59.')
+            bot.register_next_step_handler(message, survey_response)
+    elif step == 3:
+        if response in ['👍', '👌', '👎']:
+            user.current_survey_step += 1
+            ask_survey_question(message)
+        else:
+            bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
+            bot.register_next_step_handler(message, survey_response)
+    elif step == 4:
+        if response in ['Быстро', 'Средне', 'Долго']:
+            user.current_survey_step += 1
+            ask_survey_question(message)
+        else:
+            bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
+            bot.register_next_step_handler(message, survey_response)
+    elif step == 5:
+        if response in ['😀', '😊', '😐', '😒', '😖']:
+            user.current_survey_step += 1
+            ask_survey_question(message)
+        else:
+            bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
+            bot.register_next_step_handler(message, survey_response)
 
 def send_evening_message(chat_id):
     pass
