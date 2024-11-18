@@ -24,7 +24,7 @@ class User:
         self.current_survey_step = 0
         self.current_survey_data = {}
 
-bot = telebot.TeleBot('7540882179:AAHlHSHct3g2ic2Y8_YI4aozsuEz9K5tjgs')
+bot = telebot.TeleBot('7923436690:AAEzJNJFD9TmW92pYr1be-Uhh_qXfE8hc5M')
 
 # Удаляем вебхук перед началом polling
 bot.remove_webhook()
