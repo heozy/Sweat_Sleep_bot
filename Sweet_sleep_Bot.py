@@ -330,5 +330,23 @@ def menu_selection(message):
         bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
         bot.register_next_step_handler(message, menu_selection)
 
+def get_sleep_statistics(user):
+    if not user.survey_data:
+        return 'У вас пока нет данных для статистики.'
+    else:
+        total_entries = len(user.survey_data)
+        stats = f'Вы прошли анкету {total_entries} раз(а).\n'
+
+        # Пример: расчет среднего времени подъема
+        wake_times = [d['wake_hour'] * 60 + d['wake_minute'] for d in user.survey_data]
+        avg_wake_time = sum(wake_times) / total_entries
+        avg_hour = int(avg_wake_time // 60)
+        avg_minute = int(avg_wake_time % 60)
+        stats += f'Среднее время подъема: {avg_hour:02d}:{avg_minute:02d}\n'
+
+        # Добавьте другие статистические данные по необходимости
+
+        return stats
+
 
 bot.infinity_polling()
