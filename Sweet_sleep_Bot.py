@@ -41,8 +41,17 @@ def first_contact(message):
         item=types.KeyboardButton('Кто ты? 😯')
         markup.add(item)
         bot.send_message(chat_id,'Привет!',reply_markup=markup)
+    elif message.text == '/menu':
+        menu(message)
+    elif message.text == 'Да' or message.text == 'Нет':
+        survey_handler(message)
     else:
-        bot.send_message(message.chat.id, 'Напиши "Привет!" или "/start"')
+        user = users.get(chat_id)
+        if user is None:
+            bot.send_message(message.chat.id, 'Напиши "Привет!" или "/start"')
+        else:
+            bot.send_message(message.chat.id, 'Напиши "/menu"')
+        bot.register_next_step_handler(message, first_contact)
 
 def information(message):
     if message.text == 'Кто ты? 😯':
@@ -279,5 +288,47 @@ def get_sleep_tip(index):
         return tips[index]
     else:
         return "Нет дополнительных советов."
+
+@bot.message_handler(commands=['menu'])
+def menu(message):
+    chat_id = message.chat.id
+    user = users.get(chat_id)
+    if user is None:
+        bot.send_message(chat_id, 'Пожалуйста, напишите "Привет!" или "/start" чтобы начать.')
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item1 = types.KeyboardButton('Получить статистику сна')
+        item2 = types.KeyboardButton('Посмотреть библиотеку полученных советов для сна')
+        item3 = types.KeyboardButton('Поменять желаемое время получения сообщений')
+        markup.add(item1)
+        markup.add(item2)
+        markup.add(item3)
+        bot.send_message(chat_id, 'Выберите действие:', reply_markup=markup)
+        bot.register_next_step_handler(message, menu_selection)
+
+def menu_selection(message):
+    chat_id = message.chat.id
+    user = users.get(chat_id)
+    if message.text == 'Получить статистику сна':
+        stats = get_sleep_statistics(user)
+        bot.send_message(chat_id, stats)
+        bot.register_next_step_handler(message, menu_selection)
+    elif message.text == 'Посмотреть библиотеку полученных советов для сна':
+        tips = '\n'.join(user.tips_received)
+        if tips:
+            bot.send_message(chat_id, 'Ваши советы для сна:\n' + tips)
+        else:
+            bot.send_message(chat_id, 'Вы еще не получили ни одного совета.')
+        bot.register_next_step_handler(message, menu_selection)
+    elif message.text == 'Поменять желаемое время получения сообщений':
+        markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
+        item=types.KeyboardButton('Начнём')
+        markup.add(item)
+        bot.send_message(chat_id, 'Давайте настроим время снова.',reply_markup=markup)
+        bot.register_next_step_handler(message, chose_time)
+    else:
+        bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
+        bot.register_next_step_handler(message, menu_selection)
+
 
 bot.infinity_polling()
