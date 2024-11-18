@@ -11,7 +11,7 @@ scheduler.start()
 # Словарь для хранения данных пользователей
 users = {}
 
-class User: #класс, содержащий данные о удобном для пользователя времени
+class User:
     def __init__(self, chat_id):
         self.chat_id = chat_id
         self.message_time_morning = None
@@ -23,8 +23,10 @@ class User: #класс, содержащий данные о удобном д�
         self.current_survey_step = 0
         self.current_survey_data = {}
 
-
 bot = telebot.TeleBot('7540882179:AAHlHSHct3g2ic2Y8_YI4aozsuEz9K5tjgs')
+
+# Удаляем вебхук перед началом polling
+bot.remove_webhook()
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -41,6 +43,7 @@ def first_contact(message):
         item=types.KeyboardButton('Кто ты? 😯')
         markup.add(item)
         bot.send_message(chat_id,'Привет!',reply_markup=markup)
+        bot.register_next_step_handler(message, information)
     elif message.text == '/menu':
         menu(message)
     elif message.text == 'Да' or message.text == 'Нет':
@@ -347,6 +350,5 @@ def get_sleep_statistics(user):
         # Добавьте другие статистические данные по необходимости
 
         return stats
-
 
 bot.infinity_polling()
