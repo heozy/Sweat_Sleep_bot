@@ -1,6 +1,8 @@
 import telebot
 from telebot import types
 import time
+from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Словарь для хранения данных пользователей
 users = {}
@@ -111,6 +113,7 @@ def save_time(message):
     user = users[chat_id]
     if message.text == 'Сохранить✅':
         bot.send_message(chat_id,'Супер. Время установлено')
+        schedule_user_messages(user)
         bot.send_message(chat_id, 'Если хотите посмотреть меню, напишите /menu')
     elif message.text == 'Изменить':
         flag_again = True
@@ -118,5 +121,30 @@ def save_time(message):
     else:
         bot.send_message(chat_id,'Пожалуйста, выберите один из вариантов.')
         bot.register_next_step_handler(message, save_time)
+
+def schedule_user_messages(user):
+    # Удаляем существующие задания для этого пользователя
+    try:
+        scheduler.remove_job(str(user.chat_id)+'_morning')
+    except:
+        pass
+    try:
+        scheduler.remove_job(str(user.chat_id)+'_evening')
+    except:
+        pass
+
+    # Планируем утреннее сообщение
+    morning_hour, morning_minute = map(int, user.message_time_morning.split(':'))
+    scheduler.add_job(send_morning_message, 'cron', hour=morning_hour, minute=morning_minute, args=[user.chat_id], id=str(user.chat_id)+'_morning')
+
+    # Планируем вечернее сообщение
+    evening_hour, evening_minute = map(int, user.message_time_evening.split(':'))
+    scheduler.add_job(send_evening_message, 'cron', hour=evening_hour, minute=evening_minute, args=[user.chat_id], id=str(user.chat_id)+'_evening')
+
+def send_morning_message(chat_id):
+    pass
+
+def send_evening_message(chat_id):
+    pass
 
 bot.infinity_polling()
