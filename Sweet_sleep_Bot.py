@@ -11,6 +11,7 @@ scheduler.start()
 # Словарь для хранения данных пользователей
 users = {}
 
+# Структура, хранящая данные о пользователе
 class User:
     def __init__(self, chat_id):
         self.chat_id = chat_id
@@ -32,6 +33,7 @@ bot.remove_webhook()
 def start(message):
     first_contact(message)
 
+# Первая, главная функция программы. В ней прописан "первый контакт" с ботом, а также условия, необходимые для работы той или иной функции бота
 @bot.message_handler(content_types=['text'])
 def first_contact(message):
     if (message.text == 'Привет!') or (message.text == '/start'):
@@ -56,6 +58,7 @@ def first_contact(message):
             bot.send_message(message.chat.id, 'Напиши "/menu"')
         bot.register_next_step_handler(message, first_contact)
 
+# Функция, в которой описан первый диалог с ботом, знакомство с ним
 def information(message):
     if message.text == 'Кто ты? 😯':
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -88,6 +91,7 @@ def information(message):
 flag = True
 flag_again = False
 
+# Функция для проверки правильности формата введённого времени
 def valid_time_format(time_str):
     try:
         time.strptime(time_str, '%H:%M')
@@ -95,6 +99,7 @@ def valid_time_format(time_str):
     except ValueError:
         return False
 
+# Первыя из двух функций для установки времени отправки ботом сообщений
 def chose_time(message):
     global flag, flag_again
     chat_id = message.chat.id
@@ -107,6 +112,7 @@ def chose_time(message):
         bot.send_message(message.chat.id, 'Нажми на кнопку!')
         bot.register_next_step_handler(message, chose_time)
 
+# Вторая функция для установки времени отправки ботом сообщений
 def chose_time_2(message):
     global flag, flag_again
     chat_id = message.chat.id
@@ -129,6 +135,7 @@ def chose_time_2(message):
         bot.send_message(chat_id,'Введите ещё раз. Я вас не понял')
         bot.register_next_step_handler(message, chose_time_2)
 
+# Функция для сохранения выбранного пользователем времени 
 def save_time(message):
     global flag_again
     chat_id = message.chat.id
@@ -144,6 +151,7 @@ def save_time(message):
         bot.send_message(chat_id,'Пожалуйста, выберите один из вариантов.')
         bot.register_next_step_handler(message, save_time)
 
+# Фунция установки времени отправи сообщений для бота
 def schedule_user_messages(user):
     # Удаляем существующие задания для этого пользователя
     try:
@@ -163,6 +171,7 @@ def schedule_user_messages(user):
     evening_hour, evening_minute = map(int, user.message_time_evening.split(':'))
     scheduler.add_job(send_evening_message, 'cron', hour=evening_hour, minute=evening_minute, args=[user.chat_id], id=str(user.chat_id)+'_evening')
 
+# Начальная функция для отправки пользователю утренего сообщения
 def send_morning_message(chat_id):
     user = users.get(chat_id)
     if user:
@@ -172,6 +181,7 @@ def send_morning_message(chat_id):
         markup.add(item_yes, item_no)
         bot.send_message(chat_id, 'Привет! Лови утреннюю анкету 😊\nВы готовы пройти анкету?', reply_markup=markup)
 
+# Функция для обработаки ответа пользователя
 def survey_handler(message):
     chat_id = message.chat.id
     user = users[chat_id]
@@ -183,6 +193,7 @@ def survey_handler(message):
         bot.send_message(chat_id, 'Хорошо, может в следующий раз!')
         user.survey_in_progress = False
 
+# Функция для проведения опроса
 def ask_survey_question(message):
     chat_id = message.chat.id
     user = users[chat_id]
@@ -225,6 +236,7 @@ def ask_survey_question(message):
         user.survey_in_progress = False
         bot.send_message(chat_id, 'Если хотите посмотреть меню, напишите /menu')
 
+# Функция для сохранения полученных их опроса данный. а также для логического следования опроса
 def survey_response(message):
     chat_id = message.chat.id
     user = users[chat_id]
@@ -268,6 +280,7 @@ def survey_response(message):
             bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
             bot.register_next_step_handler(message, survey_response)
 
+# Функция для оправки вечернего сообщения
 def send_evening_message(chat_id):
     user = users.get(chat_id)
     if user and user.tips_sent < 5:
@@ -279,6 +292,7 @@ def send_evening_message(chat_id):
     else:
         bot.send_message(chat_id, 'Советы кончились. Но скоро будут обновления!')
 
+# Функция для выбора совета для вечернего сообщения
 def get_sleep_tip(index):
     tips = [
         "Совет 1: Избегайте употребления кофеина перед сном.",
@@ -292,6 +306,7 @@ def get_sleep_tip(index):
     else:
         return "Нет дополнительных советов."
 
+# Меню
 @bot.message_handler(commands=['menu'])
 def menu(message):
     chat_id = message.chat.id
@@ -309,6 +324,7 @@ def menu(message):
         bot.send_message(chat_id, 'Выберите действие:', reply_markup=markup)
         bot.register_next_step_handler(message, menu_selection)
 
+# Выбор пунктов меню. Выполнение соответствующих действий
 def menu_selection(message):
     chat_id = message.chat.id
     user = users.get(chat_id)
@@ -333,6 +349,7 @@ def menu_selection(message):
         bot.send_message(chat_id, 'Пожалуйста, выберите один из вариантов.')
         bot.register_next_step_handler(message, menu_selection)
 
+# Получение статистики о пользователе для её дальнейшего вывода
 def get_sleep_statistics(user):
     if not user.survey_data:
         return 'У вас пока нет данных для статистики.'
@@ -340,14 +357,12 @@ def get_sleep_statistics(user):
         total_entries = len(user.survey_data)
         stats = f'Вы прошли анкету {total_entries} раз(а).\n'
 
-        # Пример: расчет среднего времени подъема
+        #расчет среднего времени подъема
         wake_times = [d['wake_hour'] * 60 + d['wake_minute'] for d in user.survey_data]
         avg_wake_time = sum(wake_times) / total_entries
         avg_hour = int(avg_wake_time // 60)
         avg_minute = int(avg_wake_time % 60)
         stats += f'Среднее время подъема: {avg_hour:02d}:{avg_minute:02d}\n'
-
-        # Добавьте другие статистические данные по необходимости
 
         return stats
 
