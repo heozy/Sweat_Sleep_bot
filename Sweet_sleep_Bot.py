@@ -257,6 +257,27 @@ def survey_response(message):
             bot.register_next_step_handler(message, survey_response)
 
 def send_evening_message(chat_id):
-    pass
+    user = users.get(chat_id)
+    if user and user.tips_sent < 5:
+        tip = get_sleep_tip(user.tips_sent)
+        bot.send_message(chat_id, f'Совет для сна: \n{tip}')
+        user.tips_received.append(tip)
+        user.tips_sent += 1
+        bot.send_message(chat_id, 'Если хотите посмотреть меню, напишите /menu')
+    else:
+        bot.send_message(chat_id, 'Советы кончились. Но скоро будут обновления!')
+
+def get_sleep_tip(index):
+    tips = [
+        "Совет 1: Избегайте употребления кофеина перед сном.",
+        "Совет 2: Поддерживайте регулярный график сна.",
+        "Совет 3: Создайте комфортную обстановку для сна.",
+        "Совет 4: Избегайте использования гаджетов перед сном.",
+        "Совет 5: Расслабьтесь перед сном с помощью медитации или чтения."
+    ]
+    if index < len(tips):
+        return tips[index]
+    else:
+        return "Нет дополнительных советов."
 
 bot.infinity_polling()
